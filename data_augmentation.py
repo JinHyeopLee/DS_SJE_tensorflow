@@ -33,11 +33,10 @@ for image_file_name in image_file_name_list:
     image_list = list()
 
     if width > height:
-        if height < 256:
-            width = int(width * 256 / height)
-            height = 256
+        width = int(width * 256 / height)
+        height = 256
 
-            image = cv2.resize(image, (height, width))
+        image = cv2.resize(image, (width, height))
 
         image_list.append(image[0:224, 0:224])  # left-up
         image_list.append(image[0:224, -224:])  # right-up
@@ -56,11 +55,10 @@ for image_file_name in image_file_name_list:
                                 int(width / 2) - 112:int(width / 2) + 112])  # center
 
     elif height >= width:
-        if width < 256:
-            width = 256
-            height = int(height * 256 / width)
+        height = int(height * 256 / width)
+        width = 256
 
-            image = cv2.resize(image, (height, width))
+        image = cv2.resize(image, (width, height))
 
         image_list.append(image[0:224, 0:224])  # left-up
         image_list.append(image[0:224, -224:])  # right-up
@@ -77,6 +75,8 @@ for image_file_name in image_file_name_list:
         image_list.append(image[-224:, -224:])  # right-down
         image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
                                 int(width / 2) - 112:int(width / 2) + 112])  # center
+
+    print(width, height)
 
     i = 0
 
