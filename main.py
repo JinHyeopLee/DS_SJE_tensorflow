@@ -16,12 +16,16 @@ if __name__ == "__main__":
     parser.add_argument("--alphabet_size", default=70, type=int)
     parser.add_argument("--maximum_text_length", default=201, type=int)
     parser.add_argument("--cnn_represent_dim", default=1024, type=int)
+    parser.add_argument("--batch_size", default=40, type=int)
+    # parser.add_argument("--prefetch_multiply", default=3, type=int)
 
     # argument for data loader
     parser.add_argument("--train_img_data_type", default="*.npy")
-    parser.add_argument("--train_txt_data_type", default="*.txt")
+    parser.add_argument("--train_txt_data_type", default="*.npy")
     parser.add_argument("--length_char_string", default=201, type=int)
     parser.add_argument("--multi_process_num_thread", default=12, type=int)
+    parser.add_argument("--train_num_classes", default=100, type=int)
+    parser.add_argument("--valid_num_classes", default=50, type=int)
 
     args = parser.parse_args()
 

@@ -8,7 +8,7 @@ class DS_SJE_model():
         print(self.args)
 
 
-    def DS_SJE(self, text_input, is_train=True):
+    def DS_SJE(self, text_input):
         conv1 = tf.nn.conv2d(input=text_input,
                              filter=[4, 1, self.args.alphabet_size, 384],
                              strides=[1, 1, 1, 1],
@@ -37,10 +37,11 @@ class DS_SJE_model():
         conv3_max_pool = tf.nn.max_pool(value=conv3_activation,
                                         ksize=[1, 3, 1, 1],
                                         strides=[1, 2, 1, 1],
-                                        padding='VALID')
+                                        padding='VALID') # 8 x 1 x 1024 dimension
+        cnn_final = tf.squeeze(conv3_max_pool) # 8 x 1024 dimension
 
         rnn_cell = tf.nn.rnn_cell.BasicRNNCell(self.args.cnn_represent_dim)
-        outputs, state = tf.nn.static_rnn(rnn_cell, conv3_max_pool)
+        outputs, state = tf.nn.static_rnn(rnn_cell, cnn_final)
 
         embedded_code = tf.reduce_mean(state, axis=0)
 
