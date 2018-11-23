@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     # argument for text encoder's hyperparameter
     parser.add_argument("--learning_rate", default=0.0007, type=float)
-    parser.add_argument("--alphabet_size", default=71, type=int)
+    parser.add_argument("--alphabet_size", default=70, type=int)
     parser.add_argument("--maximum_text_length", default=201, type=int)
     parser.add_argument("--cnn_represent_dim", default=1024, type=int)
 
