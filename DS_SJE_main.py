@@ -45,8 +45,6 @@ class DS_SJE():
         self.train_txt_list = np.array(list())
         self.train_lbl_list = np.array(list())
 
-
-
         i = 0
         for class_name in train_list:
             class_name = class_name.replace("\n", "")
@@ -111,9 +109,9 @@ class DS_SJE():
         #
         #     i += 1
 
-        dataset = tf.data.Dataset.from_tensor_slices((train_img_list,
-                                                      train_txt_list,
-                                                      train_lbl_list))
+        dataset = tf.data.Dataset.from_tensor_slices((self.train_img_list,
+                                                      self.train_txt_list,
+                                                      self.train_lbl_list))
         # dataset = dataset.map(self.read_train_data,
         #                       num_parallel_calls=self.args.multi_process_num_thread)
         dataset = dataset.shuffle(buffer_size=10000)
@@ -135,10 +133,7 @@ class DS_SJE():
         self.loss_text = 0
 
         for i in range(self.args.train_num_classes):
-            j = 0
-
-            for individual_text in encoded_text:
-
+            j = 0 #
 
 
         self.loss_total = (self.loss_visual + self.loss_text) / self.args.train_num_classes
