@@ -14,7 +14,10 @@ class DS_SJE():
                                                 [None, self.args.maximum_text_length, 1, self.args.alphabet_size])
         self.image_input_format = tf.placeholder(tf.float32,
                                                  [None, self.args.cnn_represent_dim])
-        self.image_represent_avg = np.zeros((100, 1024))
+        self.label_input_format = tf.placeholder(tf.float32,
+                                                 [None, self.args.train_num_classes])
+
+        # self.image_represent_avg = np.zeros((100, 1024))
 
 
     def train(self):
@@ -38,9 +41,11 @@ class DS_SJE():
                 if not line: break
                 train_list.append(line)
 
-        train_img_list = np.array(list())
-        train_txt_list = np.array(list())
-        train_lbl_list = np.array(list())
+        self.train_img_list = np.array(list())
+        self.train_txt_list = np.array(list())
+        self.train_lbl_list = np.array(list())
+
+
 
         i = 0
         for class_name in train_list:
@@ -49,16 +54,18 @@ class DS_SJE():
                                                               class_name,
                                                               self.args.train_img_data_type)))
             new_img_list = np.array(list())
-            for image_file_name in new_img_file_name_list:
+            for image_file_name in new_img_file_name_list: # load actual image file
                 new_img = np.load(image_file_name, "r")
                 np.expand_dims(new_img, axis=0)
                 new_img_list = np.append(new_img_list, new_img, axis=0)
+
+            # self.image_represent_avg[i] = np.mean(new_img_list, axis=0) # class average represenatation
 
             new_txt_file_name_list = sorted(glob(os.path.join(self.args.train_txt_path,
                                                               class_name,
                                                               self.args.train_txt_data_type)))
             new_txt_list = np.array(list())
-            for text_file_name in new_txt_file_name_list:
+            for text_file_name in new_txt_file_name_list: # load actual text file
                 new_txt = np.load(text_file_name, "r")
                 np.expand_dims(new_txt, axis=0)
                 new_txt_list = np.append(new_txt_list, new_txt, axis=0)
@@ -67,9 +74,9 @@ class DS_SJE():
             for j in range(np.shape(new_img_list)[0]):
                 new_lbl_list[j, i] = 1
 
-            train_img_list = np.append(train_img_list, new_img_list, axis=0)
-            train_txt_list = np.append(train_txt_list, new_txt_list, axis=0)
-            train_lbl_list = np.append(train_lbl_list, new_lbl_list, axis=0)
+            self.train_img_list = np.append(self.train_img_list, new_img_list, axis=0)
+            self.train_txt_list = np.append(self.train_txt_list, new_txt_list, axis=0)
+            self.train_lbl_list = np.append(self.train_lbl_list, new_lbl_list, axis=0)
 
             i += 1
 
@@ -121,6 +128,17 @@ class DS_SJE():
     def network_and_loss_setup(self):
         # Network setup
         model = DS_SJE_model(args=self.args)
-        encoded_text = model.DS_SJE(text_input=self.text_input_format)
+        encoded_text = model.DS_SJE(text_input=self.text_input_format) # to make this part with no feed_dict
 
         # Loss setup
+        self.loss_visual = 0
+        self.loss_text = 0
+
+        for i in range(self.args.train_num_classes):
+            j = 0
+
+            for individual_text in encoded_text:
+
+
+
+        self.loss_total = (self.loss_visual + self.loss_text) / self.args.train_num_classes
