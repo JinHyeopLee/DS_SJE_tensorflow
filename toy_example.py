@@ -155,6 +155,32 @@ if __name__ == "__main__":
     joint_img_feature = image_classifier(I, reuse=True)
     joint_txt_feature = text_classifier(T, reuse=True)
 
+    random_txt0 = tf.placeholder(dtype=tf.float64, shape=(None, 8))
+    random_txt1 = tf.placeholder(dtype=tf.float64, shape=(None, 8))
+    random_txt2 = tf.placeholder(dtype=tf.float64, shape=(None, 8))
+    random_txt3 = tf.placeholder(dtype=tf.float64, shape=(None, 8))
+    random_txt4 = tf.placeholder(dtype=tf.float64, shape=(None, 8))
+
+    random_img0 = tf.placeholder(dtype=tf.float64, shape=(None, 10)) # think about use dictionary
+    random_img1 = tf.placeholder(dtype=tf.float64, shape=(None, 10))
+    random_img2 = tf.placeholder(dtype=tf.float64, shape=(None, 10))
+    random_img3 = tf.placeholder(dtype=tf.float64, shape=(None, 10))
+    random_img4 = tf.placeholder(dtype=tf.float64, shape=(None, 10))
+
+    rand_txt_feature = list()
+    rand_txt_feature.append(text_classifier(random_txt0, reuse=True))
+    rand_txt_feature.append(text_classifier(random_txt1, reuse=True))
+    rand_txt_feature.append(text_classifier(random_txt2, reuse=True))
+    rand_txt_feature.append(text_classifier(random_txt3, reuse=True))
+    rand_txt_feature.append(text_classifier(random_txt4, reuse=True))
+
+    rand_img_feature = list()
+    rand_img_feature.append(image_classifier(random_img0, reuse=True))
+    rand_img_feature.append(image_classifier(random_img1, reuse=True))
+    rand_img_feature.append(image_classifier(random_img2, reuse=True))
+    rand_img_feature.append(image_classifier(random_img3, reuse=True))
+    rand_img_feature.append(image_classifier(random_img4, reuse=True))
+
     t_vars = tf.global_variables()
 
     img_vars = [var for var in t_vars if var.name.startswith("image")]
@@ -173,24 +199,26 @@ if __name__ == "__main__":
     j_img_loss = 0
     j_txt_loss = 0
     for i in range(NUM_CLASSES):
-        rand_idx = np.random.randint(0, NUM_DATA_PER_CLASS - 1)
+        # rand_idx = np.random.randint(0, NUM_DATA_PER_CLASS - 1)
         j_img_loss += tf.maximum(tf.cast(0.0, tf.float64),
                                  (1 - tf.cast(tf.equal(L, i), tf.float64)) +
-                                 tf.reduce_mean(tf.tensordot(joint_img_feature[1], txt_list[i * NUM_DATA_PER_CLASS + rand_idx], 1) -
-                                                tf.tensordot(joint_img_feature[1], joint_txt_feature[1], 1)))
+                                 tf.reduce_sum(tf.multiply(joint_img_feature[1], rand_txt_feature[i][1]), 1, keep_dims=True) -
+                                 tf.reduce_sum(tf.multiply(joint_img_feature[1], joint_txt_feature[1]), 1, keep_dims=True))
 
-        rand_idx = np.random.randint(0, NUM_DATA_PER_CLASS - 1)
+        # rand_idx = np.random.randint(0, NUM_DATA_PER_CLASS - 1)
         j_txt_loss += tf.maximum(tf.cast(0.0, tf.float64),
                                  (1 - tf.cast(tf.equal(L, i), tf.float64)) +
-                                 tf.reduce_mean(tf.tensordot(img_list[i * NUM_DATA_PER_CLASS + rand_idx], joint_txt_feature[1], 1) -
-                                                tf.tensordot(joint_img_feature[1], joint_txt_feature[1], 1)))
+                                 tf.reduce_sum(tf.multiply(rand_img_feature[i][1], joint_txt_feature[1]), 1, keep_dims=True) -
+                                 tf.reduce_sum(tf.multiply(joint_img_feature[1], joint_txt_feature[1]), 1, keep_dims=True))
 
     j_total_loss = j_img_loss + j_txt_loss
-    j_optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(j_total_loss, var_list=txt_vars)
+    j_optimizer = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(j_total_loss, var_list=t_vars)
+    j_img_optimizer = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(j_img_loss, var_list=img_vars)
+    j_txt_optimizer = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(j_txt_loss, var_list=txt_vars)
 
     with tf.Session() as sess:
         saver_img = tf.train.Saver(max_to_keep=100, var_list=img_vars)
-        # saver_txt = tf.train.Saver(max_to_keep=100, var_list=txt_vars)
+        saver_txt = tf.train.Saver(max_to_keep=100, var_list=txt_vars)
 
         sess.run(init)
 
@@ -220,6 +248,7 @@ if __name__ == "__main__":
 
         tf.initialize_all_variables().run()
         saver_img.restore(sess, "./pretrained_img.ckpt")
+        saver_txt.restore(sess, "./pretrained_txt.ckpt")
         # sess.run(img_test_init_op)
         # _, result = sess.run(img_classify)
 
@@ -231,7 +260,17 @@ if __name__ == "__main__":
 
             while True:
                 try:
-                    _, l = sess.run([j_optimizer, j_total_loss])
+                    _, _, l = sess.run([j_img_optimizer, j_txt_optimizer, j_total_loss],
+                                    feed_dict={random_txt0: np.tile(np.expand_dims(txt_list[np.random.randint(0, 49)], axis=0), (10, 1)),
+                                               random_txt1: np.tile(np.expand_dims(txt_list[np.random.randint(50, 99)], axis=0), (10, 1)),
+                                               random_txt2: np.tile(np.expand_dims(txt_list[np.random.randint(100, 149)], axis=0), (10, 1)),
+                                               random_txt3: np.tile(np.expand_dims(txt_list[np.random.randint(150, 199)], axis=0), (10, 1)),
+                                               random_txt4: np.tile(np.expand_dims(txt_list[np.random.randint(200, 249)], axis=0), (10, 1)),
+                                               random_img0: np.tile(np.expand_dims(img_list[np.random.randint(0, 49)], axis=0), (10, 1)),
+                                               random_img1: np.tile(np.expand_dims(img_list[np.random.randint(50, 99)], axis=0), (10, 1)),
+                                               random_img2: np.tile(np.expand_dims(img_list[np.random.randint(100, 149)], axis=0), (10, 1)),
+                                               random_img3: np.tile(np.expand_dims(img_list[np.random.randint(150, 199)], axis=0), (10, 1)),
+                                               random_img4: np.tile(np.expand_dims(img_list[np.random.randint(200, 249)], axis=0), (10, 1)),})
                     print("loss: %f" % np.mean(l))
                 except tf.errors.OutOfRangeError:
                     break
@@ -244,4 +283,18 @@ if __name__ == "__main__":
                 x, y = result[i * NUM_DATA_PER_CLASS + j]
                 plt.scatter(x, y, c='C' + str(i))
 
+        plt.ylim(-22, 12)
+        plt.xlim(-33, 28)
+        plt.show()
+
+        sess.run(img_test_init_op)
+        _, result = sess.run(img_classify)
+
+        for i in range(NUM_CLASSES):
+            for j in range(NUM_DATA_PER_CLASS):
+                x, y = result[i * NUM_DATA_PER_CLASS + j]
+                plt.scatter(x, y, c='C' + str(i))
+
+        plt.ylim(-2, 32)
+        plt.xlim(-33, 28)
         plt.show()

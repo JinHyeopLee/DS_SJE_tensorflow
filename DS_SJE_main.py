@@ -3,6 +3,8 @@ import numpy as np
 from glob import glob
 import os
 from model import DS_SJE_model
+from DS_SJE_utils import random_select
+from DS_SJE_utils import append_nparr
 
 
 class DS_SJE():
@@ -10,18 +12,38 @@ class DS_SJE():
         self.args = args
         print(self.args)
 
-        self.text_input_format = tf.placeholder(tf.float32,
-                                                [None, self.args.maximum_text_length, 1, self.args.alphabet_size])
-        self.image_input_format = tf.placeholder(tf.float32,
-                                                 [None, self.args.cnn_represent_dim])
-        self.label_input_format = tf.placeholder(tf.float32,
-                                                 [None, self.args.train_num_classes])
-
-        # self.image_represent_avg = np.zeros((100, 1024))
+        self.classes_image = np.float32((self.args.train_num_classes, self.args.cnn_represent_dim))
+        self.classes_text = np.float32((self.args.train_num_classes,
+                                        self.args.length_char_string, 1, self.args.alphabet_size))
 
 
     def train(self):
-        return 0
+        self.input_pipeline_setup()
+        self.network_and_loss_setup()
+
+        init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+
+        with tf.Session() as sess:
+            sess.run(init)
+
+            for cur_epoch in range(self.args.num_epoch):
+                sess.run(self.train_iterator.initializer)
+
+                while True:
+                    try:
+                        for i in range(self.args.train_num_classes): # sample random image and text of each class
+                            sampled_image = self.train_img_list[random_select(i, self.class_instance_num_list)]
+                            sampled_text = self.train_txt_list[random_select(i, self.class_instance_num_list)]
+                            self.classes_image[i] = sampled_image[np.random.randint(0, 10)]
+                            self.classes_text[i] = sampled_text[np.random.randint(0, 10)]
+
+                        _, loss = sess.run([self.optimizer, self.loss_total],
+                                           feed_dict={self.classes_text_ph: self.classes_text})
+
+                    except tf.errors.OutOfRangeError:
+                        print("[EPOCH_{%02d}] last iter loss: %.8f" % loss)
+
+
 
 
     # def read_train_data(self, tuple):
@@ -32,49 +54,55 @@ class DS_SJE():
 
 
     def input_pipeline_setup(self):
-        train_list = list()
+        self.train_class_list = list()
         # valid_list = list()
 
         with open(self.args.train_meta_path, "r") as f:
             while True:
                 line = f.readline()
                 if not line: break
-                train_list.append(line)
+                self.train_class_list.append(line)
 
-        self.train_img_list = np.array(list())
-        self.train_txt_list = np.array(list())
-        self.train_lbl_list = np.array(list())
+        self.train_img_list = None
+        self.train_txt_list = None
+        self.train_lbl_list = None
+
+        self.class_instance_num_list = list()
 
         i = 0
-        for class_name in train_list:
+        for class_name in self.train_class_list:
             class_name = class_name.replace("\n", "")
             new_img_file_name_list = sorted(glob(os.path.join(self.args.train_img_path,
                                                               class_name,
                                                               self.args.train_img_data_type)))
-            new_img_list = np.array(list())
+            new_img_list = None
             for image_file_name in new_img_file_name_list: # load actual image file
                 new_img = np.load(image_file_name, "r")
-                np.expand_dims(new_img, axis=0)
-                new_img_list = np.append(new_img_list, new_img, axis=0)
-
-            # self.image_represent_avg[i] = np.mean(new_img_list, axis=0) # class average represenatation
+                new_img = np.expand_dims(new_img, axis=0)
+                new_img_list = append_nparr(new_img_list, new_img)
 
             new_txt_file_name_list = sorted(glob(os.path.join(self.args.train_txt_path,
                                                               class_name,
                                                               self.args.train_txt_data_type)))
-            new_txt_list = np.array(list())
+            new_txt_list = None
             for text_file_name in new_txt_file_name_list: # load actual text file
                 new_txt = np.load(text_file_name, "r")
-                np.expand_dims(new_txt, axis=0)
-                new_txt_list = np.append(new_txt_list, new_txt, axis=0)
+                new_txt = np.expand_dims(new_txt, axis=0)
+                new_txt_list = append_nparr(new_txt_list, new_txt)
 
-            new_lbl_list = np.zeros((np.shape(new_img_list)[0], 100))
+            print(np.shape(new_img_list))
+
+            new_lbl_list = np.zeros((np.shape(new_img_list)[0], self.args.train_num_classes))
             for j in range(np.shape(new_img_list)[0]):
                 new_lbl_list[j, i] = 1
 
-            self.train_img_list = np.append(self.train_img_list, new_img_list, axis=0)
-            self.train_txt_list = np.append(self.train_txt_list, new_txt_list, axis=0)
-            self.train_lbl_list = np.append(self.train_lbl_list, new_lbl_list, axis=0)
+            self.class_instance_num_list.append(np.shape(new_img_list)[0])
+
+            self.train_img_list = append_nparr(self.train_img_list, new_img_list)
+            print(np.shape(self.train_img_list))
+            self.train_txt_list = append_nparr(self.train_txt_list, new_txt_list)
+            print(np.shape(self.train_txt_list))
+            self.train_lbl_list = append_nparr(self.train_lbl_list, new_lbl_list)
 
             i += 1
 
@@ -119,21 +147,44 @@ class DS_SJE():
         dataset = dataset.batch(self.args.batch_size)
 
         self.train_iterator = dataset.make_initializable_iterator()
-
-        return self.train_iterator.get_next()
+        self.img_batch, self.txt_batch, self.lbl_batch = self.train_iterator.get_next()
 
 
     def network_and_loss_setup(self):
+        # Placeholder setup
+        self.classes_text_ph = tf.placeholder(tf.float32, (self.args.train_num_classes,
+                                                           self.args.length_char_string,
+                                                           1, self.args.alphabet_size))
+
         # Network setup
         model = DS_SJE_model(args=self.args)
-        encoded_text = model.DS_SJE(text_input=self.text_input_format) # to make this part with no feed_dict
+        encoded_text = model.DS_SJE(self.txt_batch)
+        class_encoded_text = list()
+
+        for i in range(self.args.train_num_classes):
+            class_encoded_text.append(model.DS_SJE(self.classes_text[i], reuse=True))
 
         # Loss setup
         self.loss_visual = 0
         self.loss_text = 0
 
         for i in range(self.args.train_num_classes):
-            j = 0 #
+            random_number = np.random.randint(0, 10)
 
+            self.loss_visual += tf.maximum(tf.cast(0.0, tf.float32),
+                                           (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
+                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number],
+                                                                     class_encoded_text[i]),
+                                                         1, keep_dims=True) -
+                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number],
+                                                                     encoded_text),
+                                                         1, keep_dims=True))
+            self.loss_text += tf.maximum(tf.cast(0.0, tf.float32),
+                                         (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
+                                         tf.reduce_sum(tf.multiply(self.classes_image[i], encoded_text),
+                                                       1, keep_dims=True) -
+                                         tf.reduce_sum(tf.multiply(self.img_batch[:, random_number], encoded_text),
+                                                       1, keep_dims=True))
 
         self.loss_total = (self.loss_visual + self.loss_text) / self.args.train_num_classes
+        self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.args.learning_rate).minimize(self.loss_total)

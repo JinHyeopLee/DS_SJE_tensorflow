@@ -1,4 +1,5 @@
 import argparse
+from DS_SJE_main import DS_SJE
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -19,6 +20,9 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", default=40, type=int)
     # parser.add_argument("--prefetch_multiply", default=3, type=int)
 
+    # argument for learning
+    parser.add_argument("--num_epoch", default=300, type=int)
+
     # argument for data loader
     parser.add_argument("--train_img_data_type", default="*.npy")
     parser.add_argument("--train_txt_data_type", default="*.npy")
@@ -29,4 +33,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # put more code!
+    model = DS_SJE(args=args)
+    model.train()
