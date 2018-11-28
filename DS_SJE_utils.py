@@ -20,3 +20,7 @@ def random_select(class_num, num_entity_each_class):
         class_base_num += num_entity_each_class[i]
 
     return class_base_num + random_offset
+
+
+# def int_to_float(tuple):
+#     return tuple[0], np.float32(tuple[1]), tuple[2]

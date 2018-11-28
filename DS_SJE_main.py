@@ -44,15 +44,6 @@ class DS_SJE():
                         print("[EPOCH_{%02d}] last iter loss: %.8f" % loss)
 
 
-
-
-    # def read_train_data(self, tuple):
-    #     image = np.load(tuple[0], "r")
-    #     text = np.load(tuple[1], "r")
-    #
-    #     return image, text, tuple[2]
-
-
     def input_pipeline_setup(self):
         self.train_class_list = list()
         # valid_list = list()
@@ -87,6 +78,7 @@ class DS_SJE():
             new_txt_list = None
             for text_file_name in new_txt_file_name_list: # load actual text file
                 new_txt = np.load(text_file_name, "r")
+                new_txt = np.int8(new_txt)
                 new_txt = np.expand_dims(new_txt, axis=0)
                 new_txt_list = append_nparr(new_txt_list, new_txt)
 
@@ -140,6 +132,7 @@ class DS_SJE():
         dataset = tf.data.Dataset.from_tensor_slices((self.train_img_list,
                                                       self.train_txt_list,
                                                       self.train_lbl_list))
+        # dataset = dataset.map()
         # dataset = dataset.map(self.read_train_data,
         #                       num_parallel_calls=self.args.multi_process_num_thread)
         dataset = dataset.shuffle(buffer_size=10000)
@@ -158,7 +151,7 @@ class DS_SJE():
 
         # Network setup
         model = DS_SJE_model(args=self.args)
-        encoded_text = model.DS_SJE(self.txt_batch)
+        encoded_text = model.DS_SJE(tf.cast(self.txt_batch, tf.float32))
         class_encoded_text = list()
 
         for i in range(self.args.train_num_classes):

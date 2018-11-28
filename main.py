@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--maximum_text_length", default=201, type=int)
     parser.add_argument("--cnn_represent_dim", default=1024, type=int)
     parser.add_argument("--batch_size", default=40, type=int)
-    # parser.add_argument("--prefetch_multiply", default=3, type=int)
+    parser.add_argument("--prefetch_multiply", default=3, type=int)
 
     # argument for learning
     parser.add_argument("--num_epoch", default=300, type=int)
