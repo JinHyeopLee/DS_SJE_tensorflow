@@ -9,7 +9,8 @@ class DS_SJE_model():
 
 
     def DS_SJE(self, text_input, reuse=False):
-        text_input = text_input[:, np.random.randint(0, 10)]
+        random_number = tf.random.uniform(shape=[1], minval=0, maxval=9, dtype=tf.int32)
+        text_input = text_input[:, random_number[0]]
 
         with tf.variable_scope("text_encoder") as scope:
             if reuse:
@@ -51,7 +52,8 @@ class DS_SJE_model():
             for temporal in cnn_final_sequence:
                 cnn_final_list.append(tf.squeeze(temporal, [1]))
 
-            rnn_cell = tf.nn.rnn_cell.BasicRNNCell(self.args.cnn_represent_dim)
+            rnn_cell = tf.nn.rnn_cell.BasicRNNCell(self.args.cnn_represent_dim, activation=tf.nn.relu, reuse=reuse)
+            # rnn_cell = tf.contrib.cudnn_rnn.CudnnRNNRelu(8, self.args.cnn_represent_dim)
             outputs, state = tf.nn.static_rnn(rnn_cell, cnn_final_list, dtype=tf.float32)
 
             # embedded_code = tf.reduce_mean(state, axis=1)

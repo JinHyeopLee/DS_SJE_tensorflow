@@ -5,7 +5,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # argument for path
-    parser.add_argument("--write_model_path", default="/media/jh/data/DS_SJE_model")
+    parser.add_argument("--write_model_path", default="/media/jh/data/DS_SJE_model/DS_SJE_model")
     parser.add_argument("--train_img_path", default="/home/jh/CUB/images")
     parser.add_argument("--train_txt_path", default="/home/jh/CUB/text_c10")
     parser.add_argument("--train_meta_path", default="/home/jh/CUB/trainclasses.txt")
@@ -22,6 +22,7 @@ if __name__ == "__main__":
 
     # argument for learning
     parser.add_argument("--num_epoch", default=300, type=int)
+    parser.add_argument("--write_summary_path", default="./summary")
 
     # argument for data loader
     parser.add_argument("--train_img_data_type", default="*.npy")

@@ -23,25 +23,35 @@ class DS_SJE():
 
         init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 
+        merged = tf.summary.merge_all()
+        train_writer = tf.summary.FileWriter(self.args.write_summary_path)
+
         with tf.Session() as sess:
+            saver = tf.train.Saver(max_to_keep=100)
+
             sess.run(init)
 
             for cur_epoch in range(self.args.num_epoch):
                 sess.run(self.train_iterator.initializer)
 
+                loss = 0
                 while True:
                     try:
                         for i in range(self.args.train_num_classes): # sample random image and text of each class
                             sampled_image = self.train_img_list[random_select(i, self.class_instance_num_list)]
                             sampled_text = self.train_txt_list[random_select(i, self.class_instance_num_list)]
                             self.classes_image[i] = sampled_image[np.random.randint(0, 10)]
-                            # self.classes_text[i] = sampled_text[np.random.randint(0, 10)]
+                            self.classes_text[i] = sampled_text
 
-                        _, loss = sess.run([self.optimizer, self.loss_total],
-                                           feed_dict={self.classes_text_ph: self.classes_text})
-
+                        _, loss, summary = sess.run([self.optimizer, self.loss_total, merged],
+                                                    feed_dict={self.classes_text_ph: self.classes_text})
+                        # print(loss)
                     except tf.errors.OutOfRangeError:
                         print("[EPOCH_{%02d}] last iter loss: %.8f" % (cur_epoch, loss))
+
+                        saver.save(sess, self.args.write_model_path, global_step=cur_epoch)
+                        train_writer.add_summary(summary, cur_epoch)
+                        break
 
 
     def input_pipeline_setup(self):
@@ -165,22 +175,25 @@ class DS_SJE():
         self.loss_text = 0
 
         for i in range(self.args.train_num_classes):
-            random_number = np.random.randint(0, 10)
+            # random_number = np.random.randint(0, 10)
+            random_number = tf.random.uniform(shape=[3], minval=0, maxval=9, dtype=tf.int32)
 
             self.loss_visual += tf.maximum(tf.cast(0.0, tf.float32),
                                            (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
-                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number],
+                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number[0]],
                                                                      class_encoded_text[i]),
                                                          axis=1, keepdims=True) -
-                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number],
+                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number[1]],
                                                                      encoded_text),
                                                          axis=1, keepdims=True))
             self.loss_text += tf.maximum(tf.cast(0.0, tf.float32),
                                          (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
                                          tf.reduce_sum(tf.multiply(self.classes_image[i], encoded_text),
                                                        axis=1, keepdims=True) -
-                                         tf.reduce_sum(tf.multiply(self.img_batch[:, random_number], encoded_text),
+                                         tf.reduce_sum(tf.multiply(self.img_batch[:, random_number[2]], encoded_text),
                                                        axis=1, keepdims=True))
 
-        self.loss_total = (self.loss_visual + self.loss_text) / self.args.train_num_classes
+        self.loss_total = tf.reduce_sum(self.loss_visual + self.loss_text) / self.args.train_num_classes
         self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.args.learning_rate).minimize(self.loss_total)
+
+        tf.summary.scalar('total_loss', self.loss_total)
