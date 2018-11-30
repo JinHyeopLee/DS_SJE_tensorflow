@@ -12,9 +12,9 @@ class DS_SJE():
         self.args = args
         print(self.args)
 
-        self.classes_image = np.float32((self.args.train_num_classes, self.args.cnn_represent_dim))
-        self.classes_text = np.float32((self.args.train_num_classes,
-                                        10, self.args.length_char_string, 1, self.args.alphabet_size))
+        self.classes_image = np.zeros((self.args.train_num_classes, self.args.cnn_represent_dim), dtype=np.float32)
+        self.classes_text = np.zeros((self.args.train_num_classes, 10,
+                                      self.args.length_char_string, 1, self.args.alphabet_size), dtype=np.float32)
 
 
     def train(self):
@@ -41,7 +41,7 @@ class DS_SJE():
                                            feed_dict={self.classes_text_ph: self.classes_text})
 
                     except tf.errors.OutOfRangeError:
-                        print("[EPOCH_{%02d}] last iter loss: %.8f" % loss)
+                        print("[EPOCH_{%02d}] last iter loss: %.8f" % (cur_epoch, loss))
 
 
     def input_pipeline_setup(self):
