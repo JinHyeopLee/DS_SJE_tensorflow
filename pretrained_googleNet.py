@@ -7,9 +7,11 @@ import cv2
 import numpy as np
 
 
+os.environ["CUDA_VISIBLE_DEVICES"]=""
+train = False
 read_list = list()
 
-with open("/home/jh/CUB/trainvalclasses.txt") as f:
+with open("/home/jh/CUB/testclasses.txt") as f:
     while True:
         line = f.readline()
         if not line: break
@@ -47,60 +49,82 @@ with tf.Session() as sess:
 
         print(width, height)
 
-        image_list = list()
+        if train:
+            image_list = list()
 
-        if width > height:
-            width = int(width * 256 / height)
-            height = 256
+            if width > height:
+                width = int(width * 256 / height)
+                height = 256
 
-            image = cv2.resize(image, (width, height))
+                image = cv2.resize(image, (width, height))
 
-            image_list.append(image[0:224, 0:224])  # left-up
-            image_list.append(image[0:224, -224:])  # right-up
-            image_list.append(image[-224:, 0:224])  # left-down
-            image_list.append(image[-224:, -224:])  # right-down
-            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                              int(width / 2) - 112:int(width / 2) + 112])  # center
+                image_list.append(image[0:224, 0:224])  # left-up
+                image_list.append(image[0:224, -224:])  # right-up
+                image_list.append(image[-224:, 0:224])  # left-down
+                image_list.append(image[-224:, -224:])  # right-down
+                image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                  int(width / 2) - 112:int(width / 2) + 112])  # center
 
-            image = cv2.flip(image, 0)
+                image = cv2.flip(image, 0)
 
-            image_list.append(image[0:224, 0:224])  # left-up
-            image_list.append(image[0:224, -224:])  # right-up
-            image_list.append(image[-224:, 0:224])  # left-down
-            image_list.append(image[-224:, -224:])  # right-down
-            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                              int(width / 2) - 112:int(width / 2) + 112])  # center
+                image_list.append(image[0:224, 0:224])  # left-up
+                image_list.append(image[0:224, -224:])  # right-up
+                image_list.append(image[-224:, 0:224])  # left-down
+                image_list.append(image[-224:, -224:])  # right-down
+                image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                  int(width / 2) - 112:int(width / 2) + 112])  # center
 
-        elif height >= width:
-            height = int(height * 256 / width)
-            width = 256
+            elif height >= width:
+                height = int(height * 256 / width)
+                width = 256
 
-            image = cv2.resize(image, (width, height))
+                image = cv2.resize(image, (width, height))
 
-            image_list.append(image[0:224, 0:224])  # left-up
-            image_list.append(image[0:224, -224:])  # right-up
-            image_list.append(image[-224:, 0:224])  # left-down
-            image_list.append(image[-224:, -224:])  # right-down
-            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                              int(width / 2) - 112:int(width / 2) + 112])  # center
+                image_list.append(image[0:224, 0:224])  # left-up
+                image_list.append(image[0:224, -224:])  # right-up
+                image_list.append(image[-224:, 0:224])  # left-down
+                image_list.append(image[-224:, -224:])  # right-down
+                image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                  int(width / 2) - 112:int(width / 2) + 112])  # center
 
-            image = cv2.flip(image, 0)
+                image = cv2.flip(image, 0)
 
-            image_list.append(image[0:224, 0:224])  # left-up
-            image_list.append(image[0:224, -224:])  # right-up
-            image_list.append(image[-224:, 0:224])  # left-down
-            image_list.append(image[-224:, -224:])  # right-down
-            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                              int(width / 2) - 112:int(width / 2) + 112])  # center
+                image_list.append(image[0:224, 0:224])  # left-up
+                image_list.append(image[0:224, -224:])  # right-up
+                image_list.append(image[-224:, 0:224])  # left-down
+                image_list.append(image[-224:, -224:])  # right-down
+                image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                  int(width / 2) - 112:int(width / 2) + 112])  # center
 
-        represents = np.zeros((10, 1024), dtype=float)
+            represents = np.zeros((10, 1024), dtype=float)
 
-        i = 0
-        for image in image_list:
-            image = np.expand_dims(image, axis=0)
+            i = 0
+            for image in image_list:
+                image = np.expand_dims(image, axis=0)
+                end_point = sess.run(end_points, feed_dict={images: image})
+                represents[i] = end_point['AvgPool_0a_7x7']
+                i += 1
+        else:
+            if width > height:
+                width = int(width * 224 / height)
+                height = 224
+
+                image = cv2.resize(image, (width, height))
+
+                image = image[:, int(width / 2) - 112:int(width / 2) + 112]
+                image = np.expand_dims(image, axis=0)
+            elif height >= width:
+                height = int(height * 224 / width)
+                width = 224
+
+                image = cv2.resize(image, (width, height))
+                image = image[int(height / 2) - 112:int(height / 2) + 112, :]
+                image = np.expand_dims(image, axis=0)
+
+            represents = np.zeros((1024), dtype=np.float32)
             end_point = sess.run(end_points, feed_dict={images: image})
-            represents[i] = end_point['AvgPool_0a_7x7']
-            i += 1
+            represents = end_point['AvgPool_0a_7x7']
+
 
         image_file_name = image_file_name.replace('.jpg', '.npy')
         np.save(image_file_name, represents)

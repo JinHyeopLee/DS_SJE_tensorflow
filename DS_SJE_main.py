@@ -37,7 +37,7 @@ class DS_SJE():
                 loss = 0
                 while True:
                     try:
-                        for i in range(self.args.train_num_classes): # sample random image and text of each class
+                        for i in range(self.args.train_num_classes):  # sample random image and text of each class
                             sampled_image = self.train_img_list[random_select(i, self.class_instance_num_list)]
                             sampled_text = self.train_txt_list[random_select(i, self.class_instance_num_list)]
                             self.classes_image[i] = sampled_image[np.random.randint(0, 10)]
@@ -77,7 +77,7 @@ class DS_SJE():
                                                               class_name,
                                                               self.args.train_img_data_type)))
             new_img_list = None
-            for image_file_name in new_img_file_name_list: # load actual image file
+            for image_file_name in new_img_file_name_list:  # load actual image file
                 new_img = np.load(image_file_name, "r")
                 new_img = np.float32(new_img)
                 new_img = np.expand_dims(new_img, axis=0)
@@ -87,7 +87,7 @@ class DS_SJE():
                                                               class_name,
                                                               self.args.train_txt_data_type)))
             new_txt_list = None
-            for text_file_name in new_txt_file_name_list: # load actual text file
+            for text_file_name in new_txt_file_name_list:  # load actual text file
                 new_txt = np.load(text_file_name, "r")
                 new_txt = np.int8(new_txt)
                 # new_txt = np.squeeze(new_txt)
@@ -163,7 +163,7 @@ class DS_SJE():
 
         # Network setup
         model = DS_SJE_model(args=self.args)
-        encoded_text = model.DS_SJE(tf.cast(self.txt_batch, tf.float32)) # tf cast can be changed by dataset map
+        encoded_text = model.DS_SJE(tf.cast(self.txt_batch, tf.float32))  # tf cast can be changed by dataset map
         class_encoded_text = list()
 
         for i in range(self.args.train_num_classes):

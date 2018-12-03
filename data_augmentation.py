@@ -3,9 +3,10 @@ from glob import glob
 import cv2
 
 
+train = True
 read_list = list()
 
-with open("/home/jh/CUB/trainvalclasses.txt") as f:
+with open("/home/jh/CUB/trainclasses.txt") as f:
     while True:
         line = f.readline()
         if not line: break
@@ -32,51 +33,68 @@ for image_file_name in image_file_name_list:
 
     image_list = list()
 
-    if width > height:
-        width = int(width * 256 / height)
-        height = 256
+    if train:
+        if width > height:
+            width = int(width * 256 / height)
+            height = 256
 
-        image = cv2.resize(image, (width, height))
+            image = cv2.resize(image, (width, height))
 
-        image_list.append(image[0:224, 0:224])  # left-up
-        image_list.append(image[0:224, -224:])  # right-up
-        image_list.append(image[-224:, 0:224])  # left-down
-        image_list.append(image[-224:, -224:])  # right-down
-        image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                                int(width / 2) - 112:int(width / 2) + 112])  # center
+            image_list.append(image[0:224, 0:224])  # left-up
+            image_list.append(image[0:224, -224:])  # right-up
+            image_list.append(image[-224:, 0:224])  # left-down
+            image_list.append(image[-224:, -224:])  # right-down
+            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                    int(width / 2) - 112:int(width / 2) + 112])  # center
 
-        image = cv2.flip(image, 0)
+            image = cv2.flip(image, 0)
 
-        image_list.append(image[0:224, 0:224])  # left-up
-        image_list.append(image[0:224, -224:])  # right-up
-        image_list.append(image[-224:, 0:224])  # left-down
-        image_list.append(image[-224:, -224:])  # right-down
-        image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                                int(width / 2) - 112:int(width / 2) + 112])  # center
+            image_list.append(image[0:224, 0:224])  # left-up
+            image_list.append(image[0:224, -224:])  # right-up
+            image_list.append(image[-224:, 0:224])  # left-down
+            image_list.append(image[-224:, -224:])  # right-down
+            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                    int(width / 2) - 112:int(width / 2) + 112])  # center
 
-    elif height >= width:
-        height = int(height * 256 / width)
-        width = 256
+        elif height >= width:
+            height = int(height * 256 / width)
+            width = 256
 
-        image = cv2.resize(image, (width, height))
+            image = cv2.resize(image, (width, height))
 
-        image_list.append(image[0:224, 0:224])  # left-up
-        image_list.append(image[0:224, -224:])  # right-up
-        image_list.append(image[-224:, 0:224])  # left-down
-        image_list.append(image[-224:, -224:])  # right-down
-        image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                                int(width / 2) - 112:int(width / 2) + 112])  # center
+            image_list.append(image[0:224, 0:224])  # left-up
+            image_list.append(image[0:224, -224:])  # right-up
+            image_list.append(image[-224:, 0:224])  # left-down
+            image_list.append(image[-224:, -224:])  # right-down
+            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                    int(width / 2) - 112:int(width / 2) + 112])  # center
 
-        image = cv2.flip(image, 0)
+            image = cv2.flip(image, 0)
 
-        image_list.append(image[0:224, 0:224])  # left-up
-        image_list.append(image[0:224, -224:])  # right-up
-        image_list.append(image[-224:, 0:224])  # left-down
-        image_list.append(image[-224:, -224:])  # right-down
-        image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
-                                int(width / 2) - 112:int(width / 2) + 112])  # center
+            image_list.append(image[0:224, 0:224])  # left-up
+            image_list.append(image[0:224, -224:])  # right-up
+            image_list.append(image[-224:, 0:224])  # left-down
+            image_list.append(image[-224:, -224:])  # right-down
+            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,
+                                    int(width / 2) - 112:int(width / 2) + 112])  # center
 
-    print(width, height)
+        print(width, height)
+    else:
+        if width > height:
+            width = int(width * 224 / height)
+            height = 224
+
+            image = cv2.resize(image, (width, height))
+
+            image_list.append(image[:, int(width / 2) - 112:int(width / 2) + 112])
+
+        elif height >= width:
+            height = int(height * 224 / width)
+            width = 224
+
+            image = cv2.resize(image, (width, height))
+
+            image_list.append(image[int(height / 2) - 112:int(height / 2) + 112,:])
 
     i = 0
 

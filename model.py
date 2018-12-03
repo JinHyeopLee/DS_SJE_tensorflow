@@ -2,15 +2,29 @@ import tensorflow as tf
 import numpy as np
 
 
+# class CustomRNN(tf.nn.rnn_cell.BasicRNNCell):
+#     def __init__(self, num_units, activation=None, reuse=None, dtype=None, **kwargs):
+#         # kwargs['state_is_tuple'] = False
+#         returns = super(CustomRNN, self).__init__(num_units=num_units,**kwargs)
+#         # self._output_size = self._state_size
+#         return returns
+#
+#
+#     def __call__(self, inputs, state):
+#         output, next_state = super(CustomRNN, self).__call__(inputs, state)
+#         return next_state, next_state
+
+
 class DS_SJE_model():
     def __init__(self, **args):
         self.args = args['args']
         print(self.args)
 
 
-    def DS_SJE(self, text_input, reuse=False):
-        random_number = tf.random.uniform(shape=[1], minval=0, maxval=9, dtype=tf.int32)
-        text_input = text_input[:, random_number[0]]
+    def DS_SJE(self, text_input, reuse=False, forward=False):
+        if not forward:
+            random_number = tf.random.uniform(shape=[1], minval=0, maxval=9, dtype=tf.int32)
+            text_input = text_input[:, random_number[0]]
 
         with tf.variable_scope("text_encoder") as scope:
             if reuse:
@@ -56,7 +70,7 @@ class DS_SJE_model():
             # rnn_cell = tf.contrib.cudnn_rnn.CudnnRNNRelu(8, self.args.cnn_represent_dim)
             outputs, state = tf.nn.static_rnn(rnn_cell, cnn_final_list, dtype=tf.float32)
 
-            # embedded_code = tf.reduce_mean(state, axis=1)
+            embedded_code = tf.reduce_mean(outputs, axis=0)
 
         if reuse == False:
             print('DS_SJE Architecture')
@@ -68,5 +82,7 @@ class DS_SJE_model():
             print(np.shape(conv3_max_pool))
             print(np.shape(cnn_final))
             print(np.shape(state))
+            print(np.shape(outputs))
+            print(np.shape(embedded_code))
 
-        return state
+        return embedded_code

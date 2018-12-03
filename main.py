@@ -1,5 +1,6 @@
 import argparse
 from DS_SJE_main import DS_SJE
+from evaluation import DS_SJE_evaluation
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -13,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_meta_path", default="/home/jh/CUB/testclasses.txt")
 
     # argument for text encoder's hyperparameter
-    parser.add_argument("--learning_rate", default=0.0007, type=float)
+    parser.add_argument("--learning_rate", default=0.0004, type=float)
     parser.add_argument("--alphabet_size", default=70, type=int)
     parser.add_argument("--maximum_text_length", default=201, type=int)
     parser.add_argument("--cnn_represent_dim", default=1024, type=int)
@@ -32,7 +33,15 @@ if __name__ == "__main__":
     parser.add_argument("--train_num_classes", default=100, type=int)
     parser.add_argument("--valid_num_classes", default=50, type=int)
 
+    # argument for evaluator
+    parser.add_argument("--valid", default=True)
+    parser.add_argument("--train", default=False)
+
     args = parser.parse_args()
 
-    model = DS_SJE(args=args)
-    model.train()
+    if args.train:
+        model = DS_SJE(args=args)
+        model.train()
+    else:
+        model = DS_SJE_evaluation(args=args)
+        model.evaluate()
