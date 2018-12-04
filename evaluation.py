@@ -77,6 +77,7 @@ class DS_SJE_evaluation():
                 new_txt = np.int8(new_txt)
                 new_txt_list = append_nparr(new_txt_list, new_txt)
 
+            print(np.shape(new_txt_list))
             result = sess.run(forward, feed_dict={self.raw_text: new_txt_list})
             result = np.mean(result, axis=0)
             self.class_txt_list.append(result)

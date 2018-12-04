@@ -150,7 +150,7 @@ def alphabetToChar(alphabet):
 
 read_list = list()
 
-with open("/home/jh/CUB/trainvalclasses.txt") as f: # before upload final code, replace here to load module
+with open("/home/jh/CUB/testclasses.txt") as f: # before upload final code, replace here to load module
     while True:
         line = f.readline()
         if not line: break

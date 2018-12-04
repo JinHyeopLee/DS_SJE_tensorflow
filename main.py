@@ -15,6 +15,8 @@ if __name__ == "__main__":
 
     # argument for text encoder's hyperparameter
     parser.add_argument("--learning_rate", default=0.0004, type=float)
+    parser.add_argument("--learning_rate_decay", default=0.98)
+    parser.add_argument("--learning_rate_decay_after", default=1)
     parser.add_argument("--alphabet_size", default=70, type=int)
     parser.add_argument("--maximum_text_length", default=201, type=int)
     parser.add_argument("--cnn_represent_dim", default=1024, type=int)
@@ -34,8 +36,8 @@ if __name__ == "__main__":
     parser.add_argument("--valid_num_classes", default=50, type=int)
 
     # argument for evaluator
-    parser.add_argument("--valid", default=True)
-    parser.add_argument("--train", default=False)
+    parser.add_argument("--valid", default=False)
+    parser.add_argument("--train", default=True)
 
     args = parser.parse_args()
 

@@ -34,23 +34,26 @@ class DS_SJE():
             for cur_epoch in range(self.args.num_epoch):
                 sess.run(self.train_iterator.initializer)
 
-                loss = 0
+                total_loss = 0
                 while True:
                     try:
                         for i in range(self.args.train_num_classes):  # sample random image and text of each class
                             sampled_image = self.train_img_list[random_select(i, self.class_instance_num_list)]
                             sampled_text = self.train_txt_list[random_select(i, self.class_instance_num_list)]
-                            self.classes_image[i] = sampled_image[np.random.randint(0, 10)]
+                            self.classes_image[i] = sampled_image
                             self.classes_text[i] = sampled_text
 
                         _, loss, summary = sess.run([self.optimizer, self.loss_total, merged],
                                                     feed_dict={self.classes_text_ph: self.classes_text})
-                        # print(loss)
+                        total_loss += loss
                     except tf.errors.OutOfRangeError:
-                        print("[EPOCH_{%02d}] last iter loss: %.8f" % (cur_epoch, loss))
+                        print("[EPOCH_{%02d}] last iter loss: %.8f" % (cur_epoch, total_loss))
 
                         saver.save(sess, self.args.write_model_path, global_step=cur_epoch)
                         train_writer.add_summary(summary, cur_epoch)
+                        if cur_epoch >= self.args.learning_rate_decay_after:
+                            self.args.learning_rate = self.args.learning_rate * self.args.learning_rate_decay
+                            print(self.args.learning_rate)
                         break
 
 
@@ -80,6 +83,7 @@ class DS_SJE():
             for image_file_name in new_img_file_name_list:  # load actual image file
                 new_img = np.load(image_file_name, "r")
                 new_img = np.float32(new_img)
+                new_img = np.mean(new_img, axis=0) # add this line for average 10 views of one image
                 new_img = np.expand_dims(new_img, axis=0)
                 new_img_list = append_nparr(new_img_list, new_img)
 
@@ -176,21 +180,21 @@ class DS_SJE():
 
         for i in range(self.args.train_num_classes):
             # random_number = np.random.randint(0, 10)
-            random_number = tf.random.uniform(shape=[3], minval=0, maxval=9, dtype=tf.int32)
+            # random_number = tf.random.uniform(shape=[3], minval=0, maxval=9, dtype=tf.int32)
 
             self.loss_visual += tf.maximum(tf.cast(0.0, tf.float32),
                                            (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
-                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number[0]],
+                                           tf.reduce_sum(tf.multiply(self.img_batch,
                                                                      class_encoded_text[i]),
                                                          axis=1, keepdims=True) -
-                                           tf.reduce_sum(tf.multiply(self.img_batch[:, random_number[1]],
+                                           tf.reduce_sum(tf.multiply(self.img_batch,
                                                                      encoded_text),
                                                          axis=1, keepdims=True))
             self.loss_text += tf.maximum(tf.cast(0.0, tf.float32),
                                          (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
                                          tf.reduce_sum(tf.multiply(self.classes_image[i], encoded_text),
                                                        axis=1, keepdims=True) -
-                                         tf.reduce_sum(tf.multiply(self.img_batch[:, random_number[2]], encoded_text),
+                                         tf.reduce_sum(tf.multiply(self.img_batch, encoded_text),
                                                        axis=1, keepdims=True))
 
         self.loss_total = tf.reduce_sum(self.loss_visual + self.loss_text) / self.args.train_num_classes
