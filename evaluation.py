@@ -53,7 +53,7 @@ class DS_SJE_evaluation():
         # tf.initialize_all_variables().run(sess)
 
         saver = tf.train.Saver()
-        saver.restore(sess, self.args.write_model_path + "-299")
+        saver.restore(sess, self.args.write_model_path + "-297")
 
         i = 0
         for class_name in self.class_list:

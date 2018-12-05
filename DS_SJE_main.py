@@ -32,29 +32,41 @@ class DS_SJE():
             sess.run(init)
 
             for cur_epoch in range(self.args.num_epoch):
-                sess.run(self.train_iterator.initializer)
-
                 total_loss = 0
-                while True:
-                    try:
-                        for i in range(self.args.train_num_classes):  # sample random image and text of each class
-                            sampled_image = self.train_img_list[random_select(i, self.class_instance_num_list)]
-                            sampled_text = self.train_txt_list[random_select(i, self.class_instance_num_list)]
-                            self.classes_image[i] = sampled_image
-                            self.classes_text[i] = sampled_text
+                for cur_iter in range(self.args.num_iter_per_epoch):
+                    cur_img_batch, cur_txt_batch = self.dataset_get_next()
+                    _, loss, summary = sess.run([self.optimizer, self.loss_total, merged],
+                                                feed_dict={self.batch_img_ph: cur_img_batch,
+                                                           self.batch_txt_ph: cur_txt_batch})
+                    total_loss += loss
+                    # print(loss)
 
-                        _, loss, summary = sess.run([self.optimizer, self.loss_total, merged],
-                                                    feed_dict={self.classes_text_ph: self.classes_text})
-                        total_loss += loss
-                    except tf.errors.OutOfRangeError:
-                        print("[EPOCH_{%02d}] last iter loss: %.8f" % (cur_epoch, total_loss))
+                print("[EPOCH_{%02d}] total loss: %.8f" % (cur_epoch, total_loss))
 
-                        saver.save(sess, self.args.write_model_path, global_step=cur_epoch)
-                        train_writer.add_summary(summary, cur_epoch)
-                        if cur_epoch >= self.args.learning_rate_decay_after:
-                            self.args.learning_rate = self.args.learning_rate * self.args.learning_rate_decay
-                            print(self.args.learning_rate)
-                        break
+                saver.save(sess, self.args.write_model_path, global_step=cur_epoch)
+                train_writer.add_summary(summary, cur_epoch)
+                if cur_epoch >= self.args.learning_rate_decay_after:
+                    self.args.learning_rate = self.args.learning_rate * self.args.learning_rate_decay
+                    print(self.args.learning_rate)
+
+
+    def dataset_get_next(self):
+        minibatch_class = np.random.permutation(100)
+        minibatch_class = minibatch_class[:self.args.batch_size]
+
+        img_batch = None
+        txt_batch = None
+
+        for class_idx in minibatch_class:
+            random_idx = random_select(class_idx, self.class_instance_num_list)
+            image = self.train_img_list[random_idx]
+            image = np.expand_dims(image, axis=0)
+            img_batch = append_nparr(img_batch, image)
+            text = np.float32(self.train_txt_list[random_idx])
+            text = np.expand_dims(text, axis=0)
+            txt_batch = append_nparr(txt_batch, text)
+
+        return img_batch, txt_batch
 
 
     def input_pipeline_setup(self):
@@ -107,10 +119,11 @@ class DS_SJE():
             self.class_instance_num_list.append(np.shape(new_img_list)[0])
 
             self.train_img_list = append_nparr(self.train_img_list, new_img_list)
-            print(np.shape(self.train_img_list))
             self.train_txt_list = append_nparr(self.train_txt_list, new_txt_list)
-            print(np.shape(self.train_txt_list))
             self.train_lbl_list = append_nparr(self.train_lbl_list, new_lbl_list)
+
+            print(np.shape(self.train_img_list))
+            print(np.shape(self.train_txt_list))
 
             i += 1
 
@@ -144,60 +157,78 @@ class DS_SJE():
         #     valid_lbl_list += new_lbl_list
         #
         #     i += 1
-
-        dataset = tf.data.Dataset.from_tensor_slices((self.train_img_list,
-                                                      self.train_txt_list,
-                                                      self.train_lbl_list))
-        # dataset = dataset.map()
-        # dataset = dataset.map(self.read_train_data,
-        #                       num_parallel_calls=self.args.multi_process_num_thread)
-        dataset = dataset.shuffle(buffer_size=10000)
-        dataset = dataset.prefetch(self.args.batch_size * self.args.prefetch_multiply)
-        dataset = dataset.batch(self.args.batch_size)
-
-        self.train_iterator = dataset.make_initializable_iterator()
-        self.img_batch, self.txt_batch, self.lbl_batch = self.train_iterator.get_next()
+        # dataset = tf.data.Dataset.from_tensor_slices((self.train_img_list,
+        #                                               self.train_txt_list,
+        #                                               self.train_lbl_list))
+        # # dataset = dataset.map()
+        # # dataset = dataset.map(self.read_train_data,
+        # #                       num_parallel_calls=self.args.multi_process_num_thread)
+        # dataset = dataset.shuffle(buffer_size=10000)
+        # dataset = dataset.prefetch(self.args.batch_size * self.args.prefetch_multiply)
+        # dataset = dataset.batch(self.args.batch_size)
+        #
+        # self.train_iterator = dataset.make_initializable_iterator()
+        # self.img_batch, self.txt_batch, self.lbl_batch = self.train_iterator.get_next()
 
 
     def network_and_loss_setup(self):
         # Placeholder setup
-        self.classes_text_ph = tf.placeholder(tf.float32, (self.args.train_num_classes,
-                                                           10, self.args.length_char_string,
-                                                           1, self.args.alphabet_size))
+        self.batch_txt_ph = tf.placeholder(tf.float32, (None, 10, self.args.length_char_string,
+                                                        1, self.args.alphabet_size))
+        self.batch_img_ph = tf.placeholder(tf.float32, (None, self.args.cnn_represent_dim))
 
         # Network setup
         model = DS_SJE_model(args=self.args)
-        encoded_text = model.DS_SJE(tf.cast(self.txt_batch, tf.float32))  # tf cast can be changed by dataset map
-        class_encoded_text = list()
-
-        for i in range(self.args.train_num_classes):
-            input = tf.expand_dims(self.classes_text_ph[i], axis=0)
-            class_encoded_text.append(model.DS_SJE(input, reuse=True))
+        encoded_text = model.DS_SJE(self.batch_txt_ph)  # tf cast can be changed by dataset map
+        # class_encoded_text = list()
+        #
+        # for i in range(self.args.train_num_classes):
+        #     input = tf.expand_dims(self.classes_text_ph[i], axis=0)
+        #     class_encoded_text.append(model.DS_SJE(input, reuse=True))
 
         # Loss setup
         self.loss_visual = 0
         self.loss_text = 0
 
-        for i in range(self.args.train_num_classes):
-            # random_number = np.random.randint(0, 10)
-            # random_number = tf.random.uniform(shape=[3], minval=0, maxval=9, dtype=tf.int32)
+        for i in range(self.args.batch_size):
+            inner_visual_loss = 0
+            inner_text_loss = 0
 
-            self.loss_visual += tf.maximum(tf.cast(0.0, tf.float32),
-                                           (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
-                                           tf.reduce_sum(tf.multiply(self.img_batch,
-                                                                     class_encoded_text[i]),
-                                                         axis=1, keepdims=True) -
-                                           tf.reduce_sum(tf.multiply(self.img_batch,
-                                                                     encoded_text),
-                                                         axis=1, keepdims=True))
-            self.loss_text += tf.maximum(tf.cast(0.0, tf.float32),
-                                         (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
-                                         tf.reduce_sum(tf.multiply(self.classes_image[i], encoded_text),
-                                                       axis=1, keepdims=True) -
-                                         tf.reduce_sum(tf.multiply(self.img_batch, encoded_text),
-                                                       axis=1, keepdims=True))
+            for j in range(self.args.batch_size):
+                inner_visual_loss += 1 - tf.cast(tf.equal(i, j), tf.float32) # check this part
+                inner_visual_loss += tf.reduce_sum(tf.multiply(self.batch_img_ph[i], encoded_text[j]))
+                inner_visual_loss -= tf.reduce_sum(tf.multiply(self.batch_img_ph[i], encoded_text[i]))
 
-        self.loss_total = tf.reduce_sum(self.loss_visual + self.loss_text) / self.args.train_num_classes
+                inner_text_loss += 1 - tf.cast(tf.equal(i, j), tf.float32)
+                inner_text_loss += tf.reduce_sum(tf.multiply(self.batch_img_ph[j], encoded_text[i]))
+                inner_text_loss -= tf.reduce_sum(tf.multiply(self.batch_img_ph[i], encoded_text[i]))
+
+            inner_visual_loss /= self.args.batch_size
+            inner_text_loss /= self.args.batch_size
+
+            self.loss_visual += tf.maximum(tf.cast(0.0, tf.float32), inner_visual_loss)
+            self.loss_text += tf.maximum(tf.cast(0.0, tf.float32), inner_text_loss)
+
+        # for i in range(self.args.train_num_classes):
+        #     # random_number = np.random.randint(0, 10)
+        #     # random_number = tf.random.uniform(shape=[3], minval=0, maxval=9, dtype=tf.int32)
+        #
+        #     self.loss_visual += tf.maximum(tf.cast(0.0, tf.float32),
+        #                                    (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
+        #                                    tf.reduce_sum(tf.multiply(self.img_batch,
+        #                                                              class_encoded_text[i]),
+        #                                                  axis=1, keepdims=True) -
+        #                                    tf.reduce_sum(tf.multiply(self.img_batch,
+        #                                                              encoded_text),
+        #                                                  axis=1, keepdims=True))
+        #     self.loss_text += tf.maximum(tf.cast(0.0, tf.float32),
+        #                                  (1 - tf.cast(tf.equal(tf.argmax(self.lbl_batch), i), tf.float32)) +
+        #                                  tf.reduce_sum(tf.multiply(self.classes_image[i], encoded_text),
+        #                                                axis=1, keepdims=True) -
+        #                                  tf.reduce_sum(tf.multiply(self.img_batch, encoded_text),
+        #                                                axis=1, keepdims=True))
+
+        self.loss_total = (self.loss_visual + self.loss_text) / self.args.batch_size
         self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.args.learning_rate).minimize(self.loss_total)
 
         tf.summary.scalar('total_loss', self.loss_total)
